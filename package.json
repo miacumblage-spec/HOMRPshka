@@ -1,0 +1,241 @@
+import { useState } from 'react';
+import { useStore } from '../store';
+import { getTagStyle } from '../tagUtils';
+import { X, Plus, Trash2, Palette, Tag } from 'lucide-react';
+import type { TagDefinition } from '../types';
+
+const PRESET_COLORS = [
+  '#ef4444', '#f97316', '#f59e0b', '#eab308',
+  '#84cc16', '#22c55e', '#10b981', '#14b8a6',
+  '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1',
+  '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
+  '#f43f5e', '#78716c', '#ffffff', '#000000',
+];
+
+export default function TagManager() {
+  const { tagDefinitions, addTagDefinition, updateTagDefinition, removeTagDefinition, setShowTagManager } = useStore();
+  const [newName, setNewName] = useState('');
+  const [newC1, setNewC1] = useState('#6366f1');
+  const [newC2, setNewC2] = useState('#8b5cf6');
+  const [newText, setNewText] = useState<'white' | 'black'>('white');
+  const [editingTag, setEditingTag] = useState<string | null>(null);
+  const [editC1, setEditC1] = useState('');
+  const [editC2, setEditC2] = useState('');
+  const [editText, setEditText] = useState<'white' | 'black'>('white');
+  const [editName, setEditName] = useState('');
+
+  const handleCreate = () => {
+    const name = newName.trim().toUpperCase();
+    if (!name) return;
+    const def: TagDefinition = { name, color1: newC1, color2: newC2, textColor: newText };
+    addTagDefinition(def);
+    setNewName('');
+  };
+
+  const startEdit = (def: TagDefinition) => {
+    setEditingTag(def.name);
+    setEditC1(def.color1);
+    setEditC2(def.color2);
+    setEditText(def.textColor as 'white' | 'black');
+    setEditName(def.name);
+  };
+
+  const saveEdit = (originalName: string) => {
+    updateTagDefinition(originalName, {
+      name: editName.trim().toUpperCase() || originalName,
+      color1: editC1,
+      color2: editC2,
+      textColor: editText,
+    });
+    setEditingTag(null);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-gray-900 rounded-2xl border border-white/10 w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl">
+        {/* Header */}
+        <div className="p-5 border-b border-white/10 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+            <Palette className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-white font-bold text-lg">Менеджер тегов</h2>
+            <p className="text-white/40 text-xs">Создавайте, редактируйте цвета и удаляйте теги</p>
+          </div>
+          <button onClick={() => setShowTagManager(false)} className="p-2 hover:bg-white/10 rounded-xl transition">
+            <X className="w-5 h-5 text-white/60" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 space-y-6">
+          {/* Create new tag */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+              <Plus className="w-4 h-4 text-green-400" /> Создать новый тег
+            </h3>
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={newName}
+                onChange={e => setNewName(e.target.value.toUpperCase())}
+                placeholder="Название тега (напр. HELPER)"
+                maxLength={16}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-purple-500/50"
+              />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-white/40 text-xs mb-1 block">Цвет 1 (левый)</label>
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={newC1} onChange={e => setNewC1(e.target.value)}
+                      className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent" />
+                    <div className="flex flex-wrap gap-1">
+                      {PRESET_COLORS.slice(0, 10).map(c => (
+                        <button key={c} onClick={() => setNewC1(c)}
+                          className={`w-5 h-5 rounded-md border ${newC1 === c ? 'border-white scale-125' : 'border-white/20'} transition`}
+                          style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-white/40 text-xs mb-1 block">Цвет 2 (правый)</label>
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={newC2} onChange={e => setNewC2(e.target.value)}
+                      className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent" />
+                    <div className="flex flex-wrap gap-1">
+                      {PRESET_COLORS.slice(10).map(c => (
+                        <button key={c} onClick={() => setNewC2(c)}
+                          className={`w-5 h-5 rounded-md border ${newC2 === c ? 'border-white scale-125' : 'border-white/20'} transition`}
+                          style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-white/40 text-xs">Цвет текста:</span>
+                <button onClick={() => setNewText('white')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition ${newText === 'white' ? 'bg-white text-black' : 'bg-white/10 text-white/50'}`}>
+                  Белый
+                </button>
+                <button onClick={() => setNewText('black')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition ${newText === 'black' ? 'bg-gray-800 text-white' : 'bg-white/10 text-white/50'}`}>
+                  Чёрный
+                </button>
+                <div className="ml-auto">
+                  <span className="text-white/30 text-xs mr-2">Предпросмотр:</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-md font-bold" style={{
+                    background: `linear-gradient(to right, ${newC1}, ${newC2})`,
+                    color: newText === 'black' ? '#000' : '#fff',
+                  }}>
+                    {newName || 'TAG'}
+                  </span>
+                </div>
+              </div>
+
+              <button onClick={handleCreate} disabled={!newName.trim()}
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold py-2.5 rounded-xl hover:from-green-600 hover:to-emerald-600 transition disabled:opacity-30 flex items-center justify-center gap-2">
+                <Plus className="w-4 h-4" /> Создать тег
+              </button>
+            </div>
+          </div>
+
+          {/* Existing tags */}
+          <div>
+            <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+              <Tag className="w-4 h-4 text-purple-400" /> Все теги ({tagDefinitions.length})
+            </h3>
+            <div className="space-y-2">
+              {tagDefinitions.map(def => (
+                <div key={def.name} className="bg-white/5 border border-white/10 rounded-xl p-3">
+                  {editingTag === def.name ? (
+                    /* Editing mode */
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <input type="text" value={editName}
+                          onChange={e => setEditName(e.target.value.toUpperCase())}
+                          className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none"
+                          maxLength={16} />
+                        <span className="text-[11px] px-2 py-0.5 rounded-md font-bold" style={{
+                          background: `linear-gradient(to right, ${editC1}, ${editC2})`,
+                          color: editText === 'black' ? '#000' : '#fff',
+                        }}>
+                          {editName || def.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <div className="flex items-center gap-1">
+                          <span className="text-white/30 text-xs">Цвет 1:</span>
+                          <input type="color" value={editC1} onChange={e => setEditC1(e.target.value)}
+                            className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent" />
+                          <div className="flex gap-0.5">
+                            {PRESET_COLORS.map(c => (
+                              <button key={c} onClick={() => setEditC1(c)}
+                                className={`w-4 h-4 rounded border ${editC1 === c ? 'border-white' : 'border-white/10'}`}
+                                style={{ backgroundColor: c }} />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <div className="flex items-center gap-1">
+                          <span className="text-white/30 text-xs">Цвет 2:</span>
+                          <input type="color" value={editC2} onChange={e => setEditC2(e.target.value)}
+                            className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent" />
+                          <div className="flex gap-0.5">
+                            {PRESET_COLORS.map(c => (
+                              <button key={c} onClick={() => setEditC2(c)}
+                                className={`w-4 h-4 rounded border ${editC2 === c ? 'border-white' : 'border-white/10'}`}
+                                style={{ backgroundColor: c }} />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white/30 text-xs">Текст:</span>
+                        <button onClick={() => setEditText('white')}
+                          className={`px-2 py-0.5 rounded text-xs ${editText === 'white' ? 'bg-white text-black' : 'bg-white/10 text-white/40'}`}>Белый</button>
+                        <button onClick={() => setEditText('black')}
+                          className={`px-2 py-0.5 rounded text-xs ${editText === 'black' ? 'bg-gray-700 text-white' : 'bg-white/10 text-white/40'}`}>Чёрный</button>
+                        <div className="ml-auto flex gap-2">
+                          <button onClick={() => setEditingTag(null)} className="px-3 py-1.5 bg-white/10 text-white/60 text-xs rounded-lg hover:bg-white/20">Отмена</button>
+                          <button onClick={() => saveEdit(def.name)} className="px-3 py-1.5 bg-green-500 text-white text-xs rounded-lg hover:bg-green-600">Сохранить</button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Display mode */
+                    <div className="flex items-center gap-3">
+                      <span className="text-[11px] px-2.5 py-1 rounded-md font-bold" style={getTagStyle(def.name, tagDefinitions)}>
+                        {def.name}
+                      </span>
+                      <div className="flex-1 flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: def.color1 }} />
+                        <span className="text-white/20 text-xs">→</span>
+                        <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: def.color2 }} />
+                        <span className="text-white/30 text-xs ml-1">{def.textColor === 'white' ? 'белый' : 'чёрный'} текст</span>
+                      </div>
+                      <button onClick={() => startEdit(def)}
+                        className="px-3 py-1.5 bg-white/10 text-white/60 text-xs rounded-lg hover:bg-white/20 hover:text-white transition flex items-center gap-1">
+                        <Palette className="w-3 h-3" /> Изменить
+                      </button>
+                      <button onClick={() => removeTagDefinition(def.name)}
+                        className="p-1.5 text-red-400/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {tagDefinitions.length === 0 && (
+                <p className="text-white/30 text-sm text-center py-4">Нет тегов. Создайте первый!</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
